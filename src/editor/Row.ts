@@ -10,21 +10,25 @@ export default class Row
 
   characters: Character[];
 
-  constructor(font: Font, baseline: number, initial: Character)
+  constructor(font: Font, baseline: number)
   {
     this.baseline = baseline;
 
-    this.characters = [initial];
+    this.characters = [];
   }
 
   get length(): number
   {
-    return this.characters.length - 1;
+    return this.characters.length;
   }
 
   offset_near(x: number): number
   {
-    const xs = this.characters.map(character => character.x + character.width);
+    const xs = this.characters.map(character => character.x);
+
+    const character = this.characters[this.characters.length - 1];
+
+    xs.push(character.x + character.width);
 
     return Util.nearest(xs, x);
   }

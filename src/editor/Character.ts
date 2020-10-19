@@ -8,17 +8,19 @@ export default class Character
 
   readonly value: string;
 
+  readonly width: number;
+
   bounding: Rectangle = new Rectangle();
 
   select: boolean = false;
 
-  constructor(font: Font, value: string, metrics: TextMetrics, baseline: number = 0)
+  constructor(font: Font, value: string, width: number, baseline: number = 0)
   {
     this.font = font;
 
     this.value = value;
 
-    this._metrics = metrics;
+    this.width = width;
 
     this._baseline = baseline;
   }
@@ -27,7 +29,7 @@ export default class Character
   {
     this._x = value;
 
-    this.reset_bounding();
+    this.calculate_bounding();
 
     this._center = this._x + this.width * 0.5;
   }
@@ -37,16 +39,11 @@ export default class Character
     return this._x;
   }
 
-  get width(): number
-  {
-    return this._metrics.width;
-  }
-
   set baseline(value: number)
   {
     this._baseline = value;
 
-    this.reset_bounding();
+    this.calculate_bounding();
   }
 
   get baseline(): number
@@ -59,7 +56,7 @@ export default class Character
     return this._center;
   }
 
-  private reset_bounding()
+  private calculate_bounding()
   {
     this.bounding.left  = this._x;
     this.bounding.right = this._x + this.width;
@@ -72,6 +69,4 @@ export default class Character
   private _baseline: number;
 
   private _center: number = 0;
-
-  private _metrics: TextMetrics;
 }

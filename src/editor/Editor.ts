@@ -136,76 +136,127 @@ export default class Editor
 
   caret_move_left()
   {
-    const location = this.location_by_backward();
+    if (!this.select && this._anchor !== this._focus)
+    {
+      const position = this._anchor < this._focus ? this._anchor : this._focus;
 
-    this.caret.to(location.index, location.offset);
+      this.set_focus(position);
 
-    this.calculate_focus_by(this.caret.location);
+      this.calculate_caret();
+    }
+    else
+    {
+      const location = this.location_by_backward();
+
+      this.caret.to(location.index, location.offset);
+
+      this.calculate_focus_by(this.caret.location);
+    }
 
     this.render();
   }
 
   caret_move_right()
   {
-    const location = this.location_by_forward();
+    if (!this.select && this._anchor !== this._focus)
+    {
+      const position = this._anchor > this._focus ? this._anchor : this._focus;
 
-    this.caret.to(location.index, location.offset);
+      this.set_focus(position);
 
-    this.calculate_focus_by(this.caret.location);
+      this.calculate_caret();
+    }
+    else
+    {
+      const location = this.location_by_forward();
+
+      this.caret.to(location.index, location.offset);
+
+      this.calculate_focus_by(this.caret.location);
+    }
 
     this.render();
   }
 
   caret_move_up()
   {
-    let index  = this.caret.location.index;
-    let offset = this.caret.location.offset;
-
-    const character = this.rows[index].characters[offset];
-
-    if (index - 1 < 0)
+    if (!this.select && this._anchor !== this._focus)
     {
-      offset = 0;
+      const position = this._anchor < this._focus ? this._anchor : this._focus;
+
+      this.set_focus(position);
+
+      this.calculate_caret();
     }
     else
     {
-      index -= 1;
+      let index  = this.caret.location.index;
+      let offset = this.caret.location.offset;
 
-      const x = character.x + character.width;
+      if (index - 1 < 0)
+      {
+        offset = 0;
+      }
+      else
+      {
+        const row = this.rows[index];
 
-      offset = this.rows[index].offset_near(x);
+        const character = row.characters[offset < row.length ? offset : row.length - 1];
+
+        let x = character.x;
+
+        if (offset >= row.length)
+        {
+          x += character.width;
+        }
+
+        index -= 1;
+
+        offset = this.rows[index].offset_near(x);
+      }
+
+      this.caret.to(index, offset);
+
+      this.calculate_focus_by(this.caret.location);
     }
-
-    this.caret.to(index, offset);
-
-    this.calculate_focus_by(this.caret.location);
 
     this.render();
   }
 
   caret_move_down()
   {
-    let index  = this.caret.location.index;
-    let offset = this.caret.location.offset;
-
-    const character = this.rows[index].characters[offset];
-
-    if (index + 1 >= this.rows.length)
+    if (!this.select && this._anchor !== this._focus)
     {
-      offset = this.rows[index].length;
+      const position = this._anchor > this._focus ? this._anchor : this._focus;
+
+      this.set_focus(position);
+
+      this.calculate_caret();
     }
     else
     {
-      index += 1;
+      let index  = this.caret.location.index;
+      let offset = this.caret.location.offset;
 
-      const x = character.x + character.width;
+      const character = this.rows[index].characters[offset];
 
-      offset = this.rows[index].offset_near(x);
+      if (index + 1 >= this.rows.length)
+      {
+        offset = this.rows[index].length;
+      }
+      else
+      {
+        index += 1;
+
+        const x = character.x;
+
+        offset = this.rows[index].offset_near(x);
+      }
+
+      this.caret.to(index, offset);
+
+      this.calculate_focus_by(this.caret.location);
     }
-
-    this.caret.to(index, offset);
-
-    this.calculate_focus_by(this.caret.location);
 
     this.render();
   }
@@ -221,16 +272,32 @@ export default class Editor
 
     const location = this.caret.location;
 
-    const character = this.rows[location.index].characters[location.offset];
+    const row = this.rows[location.index];
 
-    this.caret.draw(this.renderer, this.font, character.x + character.width, character.baseline);
+    let offset = location.offset;
+
+    if (location.offset >= row.length)
+    {
+      offset = row.length - 1;
+    }
+
+    const character = row.characters[offset];
+
+    let x = character.x;
+
+    if (location.offset >= row.length)
+    {
+      x += character.width;
+    }
+
+    this.caret.draw(this.renderer, this.font, x, character.baseline);
   }
 
   private create_character(value: string)
   {
-    const metrics = this.renderer.measure(this.font, value);
+    const width = this.renderer.measure(this.font, value);
 
-    return new Character(this.font, value, metrics);
+    return new Character(this.font, value, width);
   }
 
   private set_focus(value: number)
@@ -352,11 +419,7 @@ export default class Editor
     let x        = 0;
     let baseline = this.font.height + 4;
 
-    let metrics = this.renderer.measure(this.font, '');
-
-    let initial = new Character(this.font, '', metrics, baseline);
-
-    let row = new Row(this.font, baseline, initial);
+    let row = new Row(this.font, baseline);
 
     this.rows = [row];  // 总是存在一个初始行
 
@@ -367,11 +430,7 @@ export default class Editor
         x         = 0;
         baseline += this.font.height * 1.2;
 
-        let metrics = this.renderer.measure(this.font, '');
-
-        let initial = new Character(this.font, '', metrics, baseline);
-
-        row = new Row(this.font, baseline, initial);
+        row = new Row(this.font, baseline);
 
         this.rows.push(row);
       }

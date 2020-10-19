@@ -76,11 +76,11 @@ class Renderer
     this.device.fillText(text, x, baseline);
   }
 
-  measure(font: Font, text: string): TextMetrics
+  measure(font: Font, text: string): number
   {
     this.device.font = font.css();
 
-    return this.device.measureText(text);
+    return this.device.measureText(text).width;
   }
 
   private device: CanvasRenderingContext2D;

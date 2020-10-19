@@ -46,10 +46,10 @@ function XEditor()
   {
     editor.attach(reference.current);
 
-    editor.insert('12345\n');
-    editor.insert('这是一个测试\n');
-    editor.insert('abc\n');
-    // editor.insert('HTML5 Canvas 电子病历编辑器\n\n需要创建若干测试，以保证在后续开发过程中，已有行为的正确性。\n\n0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n\n岳子剑');
+    // editor.insert('12345\n');
+    // editor.insert('这是一个测试\n');
+    // editor.insert('abc\n');
+    editor.insert('HTML5 Canvas 电子病历编辑器\n\n需要创建若干测试，以保证在后续开发过程中，已有行为的正确性。\n\n0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n\n岳子剑\n');
   };
 
   React.useEffect(setup, []);
