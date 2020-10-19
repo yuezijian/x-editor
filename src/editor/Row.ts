@@ -10,11 +10,11 @@ export default class Row
 
   characters: Character[];
 
-  constructor(baseline: number)
+  constructor(font: Font, baseline: number, initial: Character)
   {
     this.baseline = baseline;
 
-    this.characters = [new Character('', 0, baseline)];
+    this.characters = [initial];
   }
 
   get length(): number
@@ -33,6 +33,11 @@ export default class Row
   {
     for (const character of this.characters)
     {
+      if (character.select)
+      {
+        renderer.draw_rectangle(character.bounding, '#a8cdf3');
+      }
+
       renderer.draw_text(font, character.value, character.x, character.baseline);
     }
 

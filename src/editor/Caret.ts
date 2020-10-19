@@ -6,35 +6,23 @@ import Renderer  from './Renderer';
 
 export default class Caret
 {
-  anchor: Location = new Location();
-  focus:  Location = new Location();
+  location: Location = new Location();
 
-  constructor(renderer: Renderer)
+  to(index: number, offset: number)
   {
-    this.renderer = renderer;
+    this.location.index  = index;
+    this.location.offset = offset;
   }
 
-  anchor_capture()
-  {
-    ;
-  }
-
-  anchor_release()
-  {
-    ;
-  }
-
-  draw(font: Font, x: number, baseline: number)
+  draw(renderer: Renderer, font: Font, x: number, baseline: number)
   {
     this.shape.left   = x;
     this.shape.right  = x + 3;
-    this.shape.top    = baseline + 4 - font.height;
-    this.shape.bottom = baseline + 4;
+    this.shape.top    = baseline - font.height - 2;
+    this.shape.bottom = baseline;
 
-    this.renderer.draw_rectangle(this.shape, '#000000');
+    renderer.draw_rectangle(this.shape, '#000000');
   }
 
   private shape: Rectangle = new Rectangle();
-
-  private renderer: Renderer;
 }

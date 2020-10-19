@@ -1,4 +1,4 @@
-import Editor from "./Editor";
+import Editor from './Editor';
 
 
 export default class InputAdapter
@@ -64,7 +64,7 @@ export default class InputAdapter
 
     if (key === 'Shift')
     {
-      this.shift = true;
+      this.editor.anchor_capture();
     }
 
     if (key === 'ArrowLeft')
@@ -122,7 +122,7 @@ export default class InputAdapter
 
     if (key === 'Shift')
     {
-      this.shift = false;
+      this.editor.anchor_release();
     }
   }
 
@@ -130,27 +130,27 @@ export default class InputAdapter
   {
     this.button = true;
 
-    // 考虑按键 this.shift
+    this.editor.focus_by(event.offsetX * 2, event.offsetY * 2);
 
-    this.editor.focus(event.offsetX * 2, event.offsetY * 2);
+    this.editor.anchor_capture();
   }
 
   mouse_up(event: MouseEvent)
   {
     this.button = false;
+
+    this.editor.anchor_release();
   }
 
   mouse_move(event: MouseEvent)
   {
     if (this.button)
     {
-      this.editor.focus(event.offsetX * 2, event.offsetY * 2);
+      this.editor.focus_by(event.offsetX * 2, event.offsetY * 2);
     }
   }
 
   private editor: Editor;
-
-  private shift: boolean = false;
 
   private button: boolean = false;
 

@@ -13,24 +13,29 @@ class Rectangle
     this.bottom = bottom;
   }
 
-  x()
+  get x(): number
   {
     return this.left;
   }
 
-  y()
+  get y(): number
   {
     return this.top;
   }
 
-  width()
+  get width(): number
   {
     return this.right - this.left;
   }
 
-  height()
+  get height(): number
   {
     return this.bottom - this.top;
+  }
+
+  center(): number
+  {
+    return this.left + this.width * 0.5;
   }
 
   // extend_right(value)

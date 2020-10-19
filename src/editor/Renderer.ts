@@ -33,7 +33,7 @@ class Renderer
   {
     this.device = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-    // this.device.textBaseline = 'bottom';
+    this.device.textBaseline = 'bottom';
   }
 
   draw_horizontal(y: number, left: number, right: number, color: string = 'red')
@@ -64,7 +64,7 @@ class Renderer
   {
     this.device.fillStyle = color;
 
-    this.device.fillRect(rectangle.x(), rectangle.y(), rectangle.width(), rectangle.height());
+    this.device.fillRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
   }
 
   draw_text(font: Font, text: string, x: number, baseline: number, color: string = '#000000')
@@ -76,30 +76,12 @@ class Renderer
     this.device.fillText(text, x, baseline);
   }
 
-  measure(font: Font, text: string)
+  measure(font: Font, text: string): TextMetrics
   {
     this.device.font = font.css();
 
-    return this.device.measureText(text).width;
+    return this.device.measureText(text);
   }
-
-
-  // draw_text(font, text, x, baseline, color)
-  // {
-  //   this.device.fillStyle = color;
-  //
-  //   this.device.font = `${ font.height }px ${ font.family}`;
-  //
-  //   this.device.fillText(text, x, baseline);
-  //
-  //   {
-  //     this.device.strokeStyle = '#ff0000';
-  //
-  //     const width = this.device.measureText(text).width;
-  //
-  //     this.device.strokeRect(x, baseline - font.height, width, font.height);
-  //   }
-  // }
 
   private device: CanvasRenderingContext2D;
 }
