@@ -199,16 +199,7 @@ export default class Editor
       }
       else
       {
-        const row = this.rows[index];
-
-        const character = row.characters[offset < row.length ? offset : row.length - 1];
-
-        let x = character.x;
-
-        if (offset >= row.length)
-        {
-          x += character.width;
-        }
+        const x = this.rows[index].x_by(offset);
 
         index -= 1;
 
@@ -238,17 +229,15 @@ export default class Editor
       let index  = this.caret.location.index;
       let offset = this.caret.location.offset;
 
-      const character = this.rows[index].characters[offset];
-
       if (index + 1 >= this.rows.length)
       {
         offset = this.rows[index].length;
       }
       else
       {
-        index += 1;
+        const x = this.rows[index].x_by(offset);
 
-        const x = character.x;
+        index += 1;
 
         offset = this.rows[index].offset_near(x);
       }
@@ -270,27 +259,32 @@ export default class Editor
       row.draw(this.renderer, this.font);
     }
 
+    let x = 0;
+
     const location = this.caret.location;
 
     const row = this.rows[location.index];
 
-    let offset = location.offset;
-
-    if (location.offset >= row.length)
+    if (row.length > 0)
     {
-      offset = row.length - 1;
+      let offset = location.offset;
+
+      if (location.offset >= row.length)
+      {
+        offset = row.length - 1;
+      }
+
+      const character = row.characters[offset];
+
+      x = character.x;
+
+      if (location.offset >= row.length)
+      {
+        x += character.width;
+      }
     }
 
-    const character = row.characters[offset];
-
-    let x = character.x;
-
-    if (location.offset >= row.length)
-    {
-      x += character.width;
-    }
-
-    this.caret.draw(this.renderer, this.font, x, character.baseline);
+    this.caret.draw(this.renderer, this.font, x, row.baseline);
   }
 
   private create_character(value: string)
@@ -385,7 +379,9 @@ export default class Editor
 
     for (let i = 0; i < this.rows.length; ++i)
     {
-      const length = this.rows[i].length;
+      const row = this.rows[i];
+
+      const length = row.length;
 
       n += length;
 
@@ -394,6 +390,11 @@ export default class Editor
         this.caret.to(i, length - n + this._focus);
 
         break;
+      }
+
+      if (row.linebreak !== null)
+      {
+        n += 1;
       }
     }
   }
@@ -404,7 +405,14 @@ export default class Editor
 
     for (let i = 0; i < location.index; ++i)
     {
-      offset += this.rows[i].length;
+      const row = this.rows[i];
+
+      offset += row.length;
+
+      if (row.linebreak !== null)
+      {
+        offset += 1;
+      }
     }
 
     offset += location.offset;
@@ -425,6 +433,23 @@ export default class Editor
 
     for (const character of this.document)
     {
+      if (character.value === '\n')
+      {
+        character.x        = x;
+        character.baseline = baseline;
+
+        row.linebreak = character;
+
+        x         = 0;
+        baseline += this.font.height * 1.2;
+
+        row = new Row(this.font, baseline);
+
+        this.rows.push(row);
+
+        continue;
+      }
+
       if (x + character.width >= this.bounding.right)
       {
         x         = 0;

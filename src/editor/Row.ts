@@ -10,6 +10,8 @@ export default class Row
 
   characters: Character[];
 
+  linebreak: Character | null = null;
+
   constructor(font: Font, baseline: number)
   {
     this.baseline = baseline;
@@ -22,13 +24,39 @@ export default class Row
     return this.characters.length;
   }
 
+  x_by(offset: number)
+  {
+    let x = 0;
+
+    if (this.length > 0)
+    {
+      const character = this.characters[offset < this.length ? offset : this.length - 1];
+
+      x = character.x;
+
+      if (offset >= this.length)
+      {
+        x += character.width;
+      }
+    }
+
+    return x;
+  }
+
   offset_near(x: number): number
   {
+    if (this.characters.length === 0)
+    {
+      return 0;
+    }
+
     const xs = this.characters.map(character => character.x);
+
+    // 增加一个末尾的数值
 
     const character = this.characters[this.characters.length - 1];
 
-    xs.push(character.x + character.width);
+    xs.push(character.x + character.width)
 
     return Util.nearest(xs, x);
   }
@@ -43,6 +71,11 @@ export default class Row
       }
 
       renderer.draw_text(font, character.value, character.x, character.baseline);
+    }
+
+    if (this.linebreak !== null && this.linebreak.select)
+    {
+      renderer.draw_rectangle(this.linebreak.bounding, '#a8cdf3');
     }
 
     if (debug)
