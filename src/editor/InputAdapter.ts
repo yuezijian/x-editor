@@ -3,6 +3,10 @@ import Editor from './Editor';
 
 export default class InputAdapter
 {
+  target!: HTMLInputElement;
+
+  // target!: React.MutableRefObject<HTMLInputElement>;
+
   constructor(editor: Editor)
   {
     this.editor = editor;
@@ -15,7 +19,37 @@ export default class InputAdapter
       if (event.inputType === 'insertText')
       {
         this.editor.insert(event.data as string);
+
+        event.preventDefault();
       }
+    }
+  }
+
+  copy(event: ClipboardEvent)
+  {
+    if (!this.ime)
+    {
+      const transfer = event.clipboardData as DataTransfer;
+
+      transfer.setData('text/plain', this.editor.selection());
+
+      event.preventDefault();
+    }
+  }
+
+  cut(event: ClipboardEvent)
+  {
+    if (!this.ime)
+    {
+      const transfer = event.clipboardData as DataTransfer;
+
+      const text = this.editor.selection();
+
+      this.editor.erase();
+
+      transfer.setData('text/plain', text);
+
+      event.preventDefault();
     }
   }
 
@@ -23,7 +57,9 @@ export default class InputAdapter
   {
     const transfer = event.clipboardData as DataTransfer;
 
-    this.editor.insert(transfer.getData('text'));
+    this.editor.insert(transfer.getData('text/plain'));
+
+    event.preventDefault();
   }
 
   composition_start(event: CompositionEvent)
@@ -124,6 +160,15 @@ export default class InputAdapter
     {
       this.editor.anchor_release();
     }
+  }
+
+  change(event: Event)
+  {
+  }
+
+  click(event: MouseEvent)
+  {
+    this.target.focus();
   }
 
   mouse_down(event: MouseEvent)

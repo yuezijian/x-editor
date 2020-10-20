@@ -35,6 +35,7 @@ export default class Editor
     this.renderer = new Renderer(canvas);
 
     this.update();
+    this.render();
   }
 
   insert(text: string)
@@ -53,54 +54,55 @@ export default class Editor
     this.render();
   }
 
-  delete_backward()
+  erase()
   {
     if (this._anchor !== this._focus)
     {
       const begin = this._anchor < this._focus ? this._anchor : this._focus;
       const end   = this._anchor > this._focus ? this._anchor : this._focus;
 
+      this.document.splice(begin, end - begin);
+
       this.set_focus(begin);
 
-      this.document.splice(begin, end - begin);
+      this.update();
+
+      this.render();
     }
-    else
+  }
+
+  delete_backward()
+  {
+    if (this._anchor === this._focus)
     {
       if (this._focus - 1 >= 0)
       {
+        this.anchor_capture();
+
         this.set_focus(this._focus - 1);
 
-        this.document.splice(this._focus, 1);
+        this.anchor_release();
       }
     }
 
-    this.update();
-
-    this.render();
+    this.erase();
   }
 
   delete_forward()
   {
-    if (this._anchor !== this._focus)
-    {
-      const begin = this._anchor < this._focus ? this._anchor : this._focus;
-      const end   = this._anchor > this._focus ? this._anchor : this._focus;
-
-      this.set_focus(begin);
-
-      this.document.splice(begin, end - begin);
-    }
-    else
+    if (this._anchor === this._focus)
     {
       if (this._focus + 1 <= this.document.length)
       {
-        this.document.splice(this._focus, 1);
+        this.anchor_capture();
+
+        this.set_focus(this._focus + 1);
+
+        this.anchor_release();
       }
     }
 
-    this.update();
-
-    this.render();
+    this.erase();
   }
 
   anchor_capture()
@@ -248,6 +250,21 @@ export default class Editor
     }
 
     this.render();
+  }
+
+  selection(): string
+  {
+    if (this._anchor === this._focus)
+    {
+      return '';
+    }
+
+    const begin = this._anchor < this._focus ? this._anchor : this._focus;
+    const end   = this._anchor > this._focus ? this._anchor : this._focus;
+
+    const characters = this.document.slice(begin, end);
+
+    return characters.map(character => character.value).join('');
   }
 
   render()
