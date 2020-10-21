@@ -36,7 +36,7 @@ class Renderer
     this.device.textBaseline = 'bottom';
   }
 
-  draw_horizontal(y: number, left: number, right: number, color: string = 'red')
+  draw_horizontal(y: number, left: number, right: number, color: string = 'red'): void
   {
     this.device.strokeStyle = color;
 
@@ -48,7 +48,7 @@ class Renderer
     this.device.stroke();
   }
 
-  draw_vertical(x: number, top: number, bottom: number, color: string = 'red')
+  draw_vertical(x: number, top: number, bottom: number, color: string = 'red'): void
   {
     this.device.strokeStyle = color;
 
@@ -60,14 +60,14 @@ class Renderer
     this.device.stroke();
   }
 
-  draw_rectangle(rectangle: Rectangle, color: string)
+  draw_rectangle(rectangle: Rectangle, color: string): void
   {
     this.device.fillStyle = color;
 
     this.device.fillRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
   }
 
-  draw_text(font: Font, text: string, x: number, baseline: number, color: string = '#000000')
+  draw_text(font: Font, text: string, x: number, baseline: number, color: string = '#000000'): void
   {
     this.device.fillStyle = color;
 
@@ -81,6 +81,16 @@ class Renderer
     this.device.font = font.css();
 
     return this.device.measureText(text).width;
+  }
+
+  identity()
+  {
+    this.device.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  translate(x: number, y: number)
+  {
+    this.device.translate(x, y);
   }
 
   private device: CanvasRenderingContext2D;

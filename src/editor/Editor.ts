@@ -10,8 +10,6 @@ import Util      from './Util';
 
 export default class Editor
 {
-  caret: Caret = new Caret();
-
   constructor()
   {
     console.log('Editor constructor');
@@ -21,8 +19,9 @@ export default class Editor
     this.rows = [];
   }
 
-  attach(canvas: HTMLCanvasElement)
+  attach(canvas: HTMLCanvasElement): void
   {
+    console.log(canvas)
     this.bounding = new Rectangle();
 
     this.bounding.right  = canvas.width;
@@ -38,7 +37,7 @@ export default class Editor
     this.render();
   }
 
-  insert(text: string)
+  insert(text: string): void
   {
     const begin = this._anchor < this._focus ? this._anchor : this._focus;
     const end   = this._anchor > this._focus ? this._anchor : this._focus;
@@ -54,7 +53,7 @@ export default class Editor
     this.render();
   }
 
-  erase()
+  erase(): void
   {
     if (this._anchor !== this._focus)
     {
@@ -71,7 +70,7 @@ export default class Editor
     }
   }
 
-  delete_backward()
+  delete_backward(): void
   {
     if (this._anchor === this._focus)
     {
@@ -88,7 +87,7 @@ export default class Editor
     this.erase();
   }
 
-  delete_forward()
+  delete_forward(): void
   {
     if (this._anchor === this._focus)
     {
@@ -105,38 +104,33 @@ export default class Editor
     this.erase();
   }
 
-  anchor_capture()
+  anchor_capture(): void
   {
     this.select = true;
   }
 
-  anchor_release()
+  anchor_release(): void
   {
     this.select = false;
   }
 
-  focus_by(x: number, y: number)
+  focus_by(x: number, y: number): void
   {
-    // 首先根据 y 找到行
-
-    // 记事本模式没有其他元素，只有单纯的行
-    // 所以就仅比较单纯的行中线即可
-
     const baselines = this.rows.map(row => row.baseline);
     const midlines = baselines.map(baseline => baseline - this.font.height * 0.5);
 
-    const index = Util.nearest(midlines, y);
+    const index = Util.nearest(midlines, y + this.view_y);
 
     const offset = this.rows[index].offset_near(x);
 
-    this.caret.to(index, offset);
+    this.caret_to(index, offset);
 
-    this.calculate_focus_by(this.caret.location);
+    this.calculate_focus_by(this._caret.location);
 
     this.render();
   }
 
-  caret_move_left()
+  caret_move_left(): void
   {
     if (!this.select && this._anchor !== this._focus)
     {
@@ -144,21 +138,21 @@ export default class Editor
 
       this.set_focus(position);
 
-      this.calculate_caret();
+      this.calculate_caret_by_focus();
     }
     else
     {
       const location = this.location_by_backward();
 
-      this.caret.to(location.index, location.offset);
+      this.caret_to(location.index, location.offset);
 
-      this.calculate_focus_by(this.caret.location);
+      this.calculate_focus_by(this._caret.location);
     }
 
     this.render();
   }
 
-  caret_move_right()
+  caret_move_right(): void
   {
     if (!this.select && this._anchor !== this._focus)
     {
@@ -166,21 +160,21 @@ export default class Editor
 
       this.set_focus(position);
 
-      this.calculate_caret();
+      this.calculate_caret_by_focus();
     }
     else
     {
       const location = this.location_by_forward();
 
-      this.caret.to(location.index, location.offset);
+      this.caret_to(location.index, location.offset);
 
-      this.calculate_focus_by(this.caret.location);
+      this.calculate_focus_by(this._caret.location);
     }
 
     this.render();
   }
 
-  caret_move_up()
+  caret_move_up(): void
   {
     if (!this.select && this._anchor !== this._focus)
     {
@@ -188,12 +182,12 @@ export default class Editor
 
       this.set_focus(position);
 
-      this.calculate_caret();
+      this.calculate_caret_by_focus();
     }
     else
     {
-      let index  = this.caret.location.index;
-      let offset = this.caret.location.offset;
+      let index  = this._caret.location.index;
+      let offset = this._caret.location.offset;
 
       if (index - 1 < 0)
       {
@@ -208,15 +202,15 @@ export default class Editor
         offset = this.rows[index].offset_near(x);
       }
 
-      this.caret.to(index, offset);
+      this.caret_to(index, offset);
 
-      this.calculate_focus_by(this.caret.location);
+      this.calculate_focus_by(this._caret.location);
     }
 
     this.render();
   }
 
-  caret_move_down()
+  caret_move_down(): void
   {
     if (!this.select && this._anchor !== this._focus)
     {
@@ -224,12 +218,12 @@ export default class Editor
 
       this.set_focus(position);
 
-      this.calculate_caret();
+      this.calculate_caret_by_focus();
     }
     else
     {
-      let index  = this.caret.location.index;
-      let offset = this.caret.location.offset;
+      let index  = this._caret.location.index;
+      let offset = this._caret.location.offset;
 
       if (index + 1 >= this.rows.length)
       {
@@ -244,9 +238,9 @@ export default class Editor
         offset = this.rows[index].offset_near(x);
       }
 
-      this.caret.to(index, offset);
+      this.caret_to(index, offset);
 
-      this.calculate_focus_by(this.caret.location);
+      this.calculate_focus_by(this._caret.location);
     }
 
     this.render();
@@ -267,9 +261,13 @@ export default class Editor
     return characters.map(character => character.value).join('');
   }
 
-  render()
+  render(): void
   {
+    this.renderer.identity();
+
     this.renderer.draw_rectangle(this.bounding, '#ececec');
+
+    this.renderer.translate(0, -this.view_y);
 
     for (const row of this.rows)
     {
@@ -278,7 +276,7 @@ export default class Editor
 
     let x = 0;
 
-    const location = this.caret.location;
+    const location = this._caret.location;
 
     const row = this.rows[location.index];
 
@@ -301,7 +299,33 @@ export default class Editor
       }
     }
 
-    this.caret.draw(this.renderer, this.font, x, row.baseline);
+    this._caret.draw(this.renderer, this.font, x, row.baseline);
+  }
+
+  scroll_up(): void
+  {
+    this.view_y -= this.font.height * 1.2;
+
+    if (this.view_y < 0)
+    {
+      this.view_y = 0;
+    }
+
+    this.render();
+  }
+
+  scroll_down(): void
+  {
+    this.view_y += this.font.height * 1.2;
+
+    const y = this.rows[this.rows.length - 2].baseline;
+
+    if (this.view_y > y)
+    {
+      this.view_y = y;
+    }
+
+    this.render();
   }
 
   private create_character(value: string)
@@ -339,8 +363,8 @@ export default class Editor
 
   private location_by_backward(): Location
   {
-    let index  = this.caret.location.index;
-    let offset = this.caret.location.offset;
+    let index  = this._caret.location.index;
+    let offset = this._caret.location.offset;
 
     if (offset - 1 < 0)
     {
@@ -365,8 +389,8 @@ export default class Editor
 
   private location_by_forward(): Location
   {
-    let index  = this.caret.location.index;
-    let offset = this.caret.location.offset;
+    let index  = this._caret.location.index;
+    let offset = this._caret.location.offset;
 
     const row = this.rows[index];
 
@@ -388,7 +412,7 @@ export default class Editor
     return new Location(index, offset);
   }
 
-  private calculate_caret()
+  private calculate_caret_by_focus()
   {
     // 计算光标位置
 
@@ -404,7 +428,7 @@ export default class Editor
 
       if (n >= this._focus)
       {
-        this.caret.to(i, length - n + this._focus);
+        this.caret_to(i, length - n + this._focus);
 
         break;
       }
@@ -437,11 +461,33 @@ export default class Editor
     this.set_focus(offset);
   }
 
+  private caret_to(index: number, focus: number): void
+  {
+    this._caret.to(index, focus);
+
+    const baseline = this.rows[this._caret.location.index].baseline;
+
+    if (baseline - this.view_y < this.font.height * 1.2)
+    {
+      this.view_y = baseline - this.font.height * 1.2;
+    }
+
+    if (baseline - this.view_y > this.bounding.height)
+    {
+      this.view_y = baseline - this.bounding.height;
+    }
+
+    if (this.view_y < 0)
+    {
+      this.view_y = 0;
+    }
+  }
+
   private update()
   {
     // 使用文档结构，更新绘制结构
 
-    let x        = 0;
+    let x        = this.bounding.left;
     let baseline = this.font.height + 4;
 
     let row = new Row(this.font, baseline);
@@ -457,7 +503,7 @@ export default class Editor
 
         row.linebreak = character;
 
-        x         = 0;
+        x         = this.bounding.left;
         baseline += this.font.height * 1.2;
 
         row = new Row(this.font, baseline);
@@ -469,7 +515,7 @@ export default class Editor
 
       if (x + character.width >= this.bounding.right)
       {
-        x         = 0;
+        x         = this.bounding.left;
         baseline += this.font.height * 1.2;
 
         row = new Row(this.font, baseline);
@@ -485,7 +531,7 @@ export default class Editor
       x += character.width;
     }
 
-    this.calculate_caret();
+    this.calculate_caret_by_focus();
   }
 
   private readonly document: Character[];
@@ -501,5 +547,9 @@ export default class Editor
 
   private     font!: Font;
 
+  private _caret: Caret = new Caret();
+
   private renderer!: Renderer;
+
+  private view_y: number = 0;
 }

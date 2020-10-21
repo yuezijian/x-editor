@@ -5,8 +5,6 @@ export default class InputAdapter
 {
   target!: HTMLInputElement;
 
-  // target!: React.MutableRefObject<HTMLInputElement>;
-
   constructor(editor: Editor)
   {
     this.editor = editor;
@@ -171,27 +169,49 @@ export default class InputAdapter
     this.target.focus();
   }
 
-  mouse_down(event: MouseEvent)
+  pointer_down(event: PointerEvent)
   {
     this.button = true;
 
     this.editor.focus_by(event.offsetX * 2, event.offsetY * 2);
 
+    const target = event.target as HTMLCanvasElement;
+
+    target.setPointerCapture(event.pointerId);
+
     this.editor.anchor_capture();
   }
 
-  mouse_up(event: MouseEvent)
+  pointer_up(event: PointerEvent)
   {
     this.button = false;
+
+    const target = event.target as HTMLCanvasElement;
+
+    target.releasePointerCapture(event.pointerId);
 
     this.editor.anchor_release();
   }
 
-  mouse_move(event: MouseEvent)
+  pointer_move(event: PointerEvent)
   {
     if (this.button)
     {
       this.editor.focus_by(event.offsetX * 2, event.offsetY * 2);
+    }
+  }
+
+  wheel(event: WheelEvent)
+  {
+    event.preventDefault();
+
+    if (event.deltaY < 0)
+    {
+      this.editor.scroll_up();
+    }
+    else
+    {
+      this.editor.scroll_down();
     }
   }
 
