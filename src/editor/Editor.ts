@@ -2,26 +2,24 @@ import Caret     from './Caret';
 import Character from './Character';
 import Font      from './Font';
 import Location  from './Location';
+import Page      from './Page';
 import Rectangle from './Rectangle';
 import Renderer  from './Renderer';
-import Row       from './Row';
-import Util      from './Util';
 
 
 export default class Editor
 {
+  font: Font = new Font('courier', 32);
+
   constructor()
   {
     console.log('Editor constructor');
 
     this.document = [];
-
-    this.rows = [];
   }
 
   attach(canvas: HTMLCanvasElement): void
   {
-    console.log(canvas)
     this.bounding = new Rectangle();
 
     this.bounding.right  = canvas.width;
@@ -29,11 +27,10 @@ export default class Editor
 
     canvas.style.cursor = 'text';
 
-    this.font = new Font('courier', 32);
-
     this.renderer = new Renderer(canvas);
 
     this.update();
+
     this.render();
   }
 
@@ -46,7 +43,7 @@ export default class Editor
 
     this.document.splice(begin, end - begin, ...characters);
 
-    this.set_focus(begin + characters.length);
+    this.set_document_focus(begin + characters.length);
 
     this.update();
 
@@ -62,7 +59,7 @@ export default class Editor
 
       this.document.splice(begin, end - begin);
 
-      this.set_focus(begin);
+      this.set_document_focus(begin);
 
       this.update();
 
@@ -78,7 +75,7 @@ export default class Editor
       {
         this.anchor_capture();
 
-        this.set_focus(this._focus - 1);
+        this.set_document_focus(this._focus - 1);
 
         this.anchor_release();
       }
@@ -95,7 +92,7 @@ export default class Editor
       {
         this.anchor_capture();
 
-        this.set_focus(this._focus + 1);
+        this.set_document_focus(this._focus + 1);
 
         this.anchor_release();
       }
@@ -116,16 +113,21 @@ export default class Editor
 
   focus_by(x: number, y: number): void
   {
-    const baselines = this.rows.map(row => row.baseline);
-    const midlines = baselines.map(baseline => baseline - this.font.height * 0.5);
+    for (let i = 0; i < this.pages.length; ++i)
+    {
+      const page = this.pages[i];
 
-    const index = Util.nearest(midlines, y + this.view_y);
+      const location = page.focus(x, y + this.view_y);
 
-    const offset = this.rows[index].offset_near(x);
+      if (location)
+      {
+        this.caret_to([i, ...location.path], location.offset);
 
-    this.caret_to(index, offset);
+        this.calculate_document_offset_by(this._caret.location);
 
-    this.calculate_focus_by(this._caret.location);
+        break;
+      }
+    }
 
     this.render();
   }
@@ -136,17 +138,17 @@ export default class Editor
     {
       const position = this._anchor < this._focus ? this._anchor : this._focus;
 
-      this.set_focus(position);
+      this.set_document_focus(position);
 
-      this.calculate_caret_by_focus();
+      this.calculate_caret_by_document_focus();
     }
     else
     {
       const location = this.location_by_backward();
 
-      this.caret_to(location.index, location.offset);
+      this.caret_to(location.path, location.offset);
 
-      this.calculate_focus_by(this._caret.location);
+      this.calculate_document_offset_by(this._caret.location);
     }
 
     this.render();
@@ -158,17 +160,17 @@ export default class Editor
     {
       const position = this._anchor > this._focus ? this._anchor : this._focus;
 
-      this.set_focus(position);
+      this.set_document_focus(position);
 
-      this.calculate_caret_by_focus();
+      this.calculate_caret_by_document_focus();
     }
     else
     {
       const location = this.location_by_forward();
 
-      this.caret_to(location.index, location.offset);
+      this.caret_to(location.path, location.offset);
 
-      this.calculate_focus_by(this._caret.location);
+      this.calculate_document_offset_by(this._caret.location);
     }
 
     this.render();
@@ -180,31 +182,45 @@ export default class Editor
     {
       const position = this._anchor < this._focus ? this._anchor : this._focus;
 
-      this.set_focus(position);
+      this.set_document_focus(position);
 
-      this.calculate_caret_by_focus();
+      this.calculate_caret_by_document_focus();
     }
     else
     {
-      let index  = this._caret.location.index;
+      let i_page = this._caret.location.path[0];
+      let i_row  = this._caret.location.path[1];
+
       let offset = this._caret.location.offset;
 
-      if (index - 1 < 0)
+      if (i_row - 1 < 0)
       {
-        offset = 0;
+        if (i_page - 1 < 0)
+        {
+          offset = 0;
+        }
+        else
+        {
+          const x = this.pages[i_page].rows[i_row].x_by(offset);
+
+          i_page -= 1;
+          i_row   = this.pages[i_page].rows.length - 1;
+
+          offset = this.pages[i_page].rows[i_row].offset_near(x);
+        }
       }
       else
       {
-        const x = this.rows[index].x_by(offset);
+        const x = this.pages[i_page].rows[i_row].x_by(offset);
 
-        index -= 1;
+        i_row -= 1;
 
-        offset = this.rows[index].offset_near(x);
+        offset = this.pages[i_page].rows[i_row].offset_near(x);
       }
 
-      this.caret_to(index, offset);
+      this.caret_to([i_page, i_row], offset);
 
-      this.calculate_focus_by(this._caret.location);
+      this.calculate_document_offset_by(this._caret.location);
     }
 
     this.render();
@@ -216,31 +232,45 @@ export default class Editor
     {
       const position = this._anchor > this._focus ? this._anchor : this._focus;
 
-      this.set_focus(position);
+      this.set_document_focus(position);
 
-      this.calculate_caret_by_focus();
+      this.calculate_caret_by_document_focus();
     }
     else
     {
-      let index  = this._caret.location.index;
+      let i_page = this._caret.location.path[0];
+      let i_row  = this._caret.location.path[1];
+
       let offset = this._caret.location.offset;
 
-      if (index + 1 >= this.rows.length)
+      if (i_row + 1 >= this.pages[i_page].rows.length)
       {
-        offset = this.rows[index].length;
+        if (i_page + 1 >= this.pages.length)
+        {
+          offset = this.pages[i_page].rows[i_row].length;
+        }
+        else
+        {
+          const x = this.pages[i_page].rows[i_row].x_by(offset);
+
+          i_page += 1;
+          i_row   = 0;
+
+          offset = this.pages[i_page].rows[i_row].offset_near(x);
+        }
       }
       else
       {
-        const x = this.rows[index].x_by(offset);
+        const x = this.pages[i_page].rows[i_row].x_by(offset);
 
-        index += 1;
+        i_row += 1;
 
-        offset = this.rows[index].offset_near(x);
+        offset = this.pages[i_page].rows[i_row].offset_near(x);
       }
 
-      this.caret_to(index, offset);
+      this.caret_to([i_page, i_row], offset);
 
-      this.calculate_focus_by(this._caret.location);
+      this.calculate_document_offset_by(this._caret.location);
     }
 
     this.render();
@@ -269,16 +299,20 @@ export default class Editor
 
     this.renderer.translate(0, -this.view_y);
 
-    for (const row of this.rows)
+    for (let i = 0; i < this.pages.length; ++i)
     {
-      row.draw(this.renderer, this.font);
-    }
+      const page = this.pages[i];
 
-    let x = 0;
+      page.draw(this.renderer);
+    }
 
     const location = this._caret.location;
 
-    const row = this.rows[location.index];
+    const page = this.pages[location.path[0]];
+
+    const row = page.rows[location.path[1]];
+
+    let x = 0;
 
     if (row.length > 0)
     {
@@ -291,7 +325,7 @@ export default class Editor
 
       const character = row.characters[offset];
 
-      x = character.x;
+      x += character.x;
 
       if (location.offset >= row.length)
       {
@@ -299,26 +333,31 @@ export default class Editor
       }
     }
 
+    this.renderer.save();
+
+    this.renderer.translate(page.origin_x, page.origin_y);
+
+    this.renderer.save();
+
+    this.renderer.translate(page.padding, page.padding);
+
     this._caret.draw(this.renderer, this.font, x, row.baseline);
+
+    this.renderer.restore();
+
+    this.renderer.restore();
   }
 
-  scroll_up(): void
+  scroll(value: number): void
   {
-    this.view_y -= this.font.height * 1.2;
+    this.view_y += value;
 
     if (this.view_y < 0)
     {
       this.view_y = 0;
     }
 
-    this.render();
-  }
-
-  scroll_down(): void
-  {
-    this.view_y += this.font.height * 1.2;
-
-    const y = this.rows[this.rows.length - 2].baseline;
+    const y = (Page.Height + 20) * (this.pages.length - 1);
 
     if (this.view_y > y)
     {
@@ -335,7 +374,7 @@ export default class Editor
     return new Character(this.font, value, width);
   }
 
-  private set_focus(value: number)
+  private set_document_focus(value: number)
   {
     this._focus = value;
 
@@ -363,90 +402,152 @@ export default class Editor
 
   private location_by_backward(): Location
   {
-    let index  = this._caret.location.index;
+    let i_page = this._caret.location.path[0];
+    let i_row  = this._caret.location.path[1];
+
     let offset = this._caret.location.offset;
 
     if (offset - 1 < 0)
     {
-      if (index - 1 < 0)
+      if (i_row - 1 < 0)
       {
-        return new Location(index, offset);
+        if (i_page - 1 < 0)
+        {
+          return new Location([0, 0], 0);
+        }
+        else
+        {
+          i_page -= 1;
+
+          i_row = this.pages[i_page].rows.length - 1;
+
+          offset = this.pages[i_page].rows[i_row].length;
+        }
       }
+      else
+      {
+        i_row -= 1;
 
-      index -= 1;
-
-      const row = this.rows[index];
-
-      offset = row.length;
+        offset = this.pages[i_page].rows[i_row].length;
+      }
     }
     else
     {
       offset -= 1;
     }
 
-    return new Location(index, offset);
+    return new Location([i_page, i_row], offset);
   }
 
   private location_by_forward(): Location
   {
-    let index  = this._caret.location.index;
+    let i_page = this._caret.location.path[0];
+    let i_row  = this._caret.location.path[1];
+
     let offset = this._caret.location.offset;
 
-    const row = this.rows[index];
+    const row = this.pages[i_page].rows[i_row];
 
     if (offset + 1 > row.length)
     {
-      if (index + 1 >= this.rows.length)
+      if (i_row + 1 >= this.pages[i_page].rows.length)
       {
-        return new Location(index, offset);
-      }
+        if (i_page + 1 >= this.pages.length)
+        {
+          return new Location([i_page, i_row], offset);
+        }
+        else
+        {
+          i_page += 1;
+          i_row   = 0;
 
-      index  += 1;
-      offset  = 0;
+          offset = 0;
+        }
+      }
+      else
+      {
+        i_row += 1;
+
+        offset = 0;
+      }
     }
     else
     {
       offset += 1;
     }
 
-    return new Location(index, offset);
+    return new Location([i_page, i_row], offset);
   }
 
-  private calculate_caret_by_focus()
+  private calculate_caret_by_document_focus()
   {
     // 计算光标位置
 
     let n = 0;
 
-    for (let i = 0; i < this.rows.length; ++i)
+    for (let i_page = 0; i_page < this.pages.length; ++i_page)
     {
-      const row = this.rows[i];
+      const page = this.pages[i_page];
 
-      const length = row.length;
+      const rows = page.rows;
 
-      n += length;
-
-      if (n >= this._focus)
+      for (let i_row = 0; i_row < rows.length; ++i_row)
       {
-        this.caret_to(i, length - n + this._focus);
+        const row = rows[i_row];
 
-        break;
-      }
+        const length = row.length;
 
-      if (row.linebreak !== null)
-      {
-        n += 1;
+        n += length;
+
+        if (n >= this._focus)
+        {
+          const path = [i_page, i_row];
+
+          const offset = length - n + this._focus;
+
+          this.caret_to(path, offset);
+
+          return;
+        }
+
+        if (row.linebreak !== null)
+        {
+          n += 1;
+        }
       }
     }
   }
 
-  private calculate_focus_by(location: Location)
+  private calculate_document_offset_by(location: Location)
   {
     let offset = 0;
 
-    for (let i = 0; i < location.index; ++i)
+    for (let i_page = 0; i_page < location.path[0]; ++i_page)
     {
-      const row = this.rows[i];
+      const page = this.pages[i_page];
+
+      const rows = page.rows;
+
+      for (let i_row = 0; i_row < rows.length; ++i_row)
+      {
+        const row = rows[i_row];
+
+        offset += row.length;
+
+        if (row.linebreak !== null)
+        {
+          offset += 1;
+        }
+      }
+    }
+
+    const page = this.pages[location.path[0]];
+
+    const rows = page.rows;
+
+    for (let i = 0; i < location.path[1]; ++i)
+    {
+      const row = rows[i];
 
       offset += row.length;
 
@@ -458,80 +559,77 @@ export default class Editor
 
     offset += location.offset;
 
-    this.set_focus(offset);
+    this.set_document_focus(offset);
   }
 
-  private caret_to(index: number, focus: number): void
+  private caret_to(path: number[], focus: number): void
   {
-    this._caret.to(index, focus);
+    this._caret.to(path, focus);
 
-    const baseline = this.rows[this._caret.location.index].baseline;
+    // todo 光标的移动将影响 view_y，但目前的逻辑不对
 
-    if (baseline - this.view_y < this.font.height * 1.2)
-    {
-      this.view_y = baseline - this.font.height * 1.2;
-    }
+    // todo 目前就两层，page -> row ，未来需要一层层的找了
 
-    if (baseline - this.view_y > this.bounding.height)
-    {
-      this.view_y = baseline - this.bounding.height;
-    }
+    // const page = this.pages[path[0]];
 
-    if (this.view_y < 0)
-    {
-      this.view_y = 0;
-    }
+    // const rows = page.rows;
+
+    // const baseline = rows[this._caret.location.path[1]].baseline;
+
+    // if (baseline - this.view_y < this.font.height * 1.2)
+    // {
+    //   this.view_y = baseline - this.font.height * 1.2;
+    // }
+    //
+    // if (baseline - this.view_y > this.bounding.height)
+    // {
+    //   this.view_y = baseline - this.bounding.height;
+    // }
+    //
+    // if (this.view_y < 0)
+    // {
+    //   this.view_y = 0;
+    // }
   }
 
   private update()
   {
     // 使用文档结构，更新绘制结构
 
-    let x        = this.bounding.left;
-    let baseline = this.font.height + 4;
+    let index = 0;
 
-    let row = new Row(this.font, baseline);
+    let page = new Page(this);
 
-    this.rows = [row];  // 总是存在一个初始行
+    page.origin_x = 100;
+    page.origin_y = 40 + (page.height + 20) * index;
+
+    index += 1;
+
+    this.pages = [page];
+
+    const full = (character: Character | null) =>
+    {
+      page = new Page(this);
+
+      page.origin_x = 100;
+      page.origin_y = 40 + (page.height + 20) * index;
+
+      index += 1;
+
+      if (character)
+      {
+        page.add(character, full);
+      }
+
+      this.pages.push(page);
+    };
 
     for (const character of this.document)
     {
-      if (character.value === '\n')
-      {
-        character.x        = x;
-        character.baseline = baseline;
-
-        row.linebreak = character;
-
-        x         = this.bounding.left;
-        baseline += this.font.height * 1.2;
-
-        row = new Row(this.font, baseline);
-
-        this.rows.push(row);
-
-        continue;
-      }
-
-      if (x + character.width >= this.bounding.right)
-      {
-        x         = this.bounding.left;
-        baseline += this.font.height * 1.2;
-
-        row = new Row(this.font, baseline);
-
-        this.rows.push(row);
-      }
-
-      character.x        = x;
-      character.baseline = baseline;
-
-      row.characters.push(character);
-
-      x += character.width;
+      page.add(character, full);
     }
 
-    this.calculate_caret_by_focus();
+    this.calculate_caret_by_document_focus();
   }
 
   private readonly document: Character[];
@@ -541,11 +639,9 @@ export default class Editor
   private _anchor: number = 0;
   private _focus:  number = 0;
 
-  private rows: Row[];
+  private pages!: Page[];
 
   private bounding!: Rectangle;
-
-  private     font!: Font;
 
   private _caret: Caret = new Caret();
 

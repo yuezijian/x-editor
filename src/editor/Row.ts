@@ -12,7 +12,7 @@ export default class Row
 
   linebreak: Character | null = null;
 
-  constructor(font: Font, baseline: number)
+  constructor(baseline: number)
   {
     this.baseline = baseline;
 

@@ -38,25 +38,20 @@ class Rectangle
     return this.left + this.width * 0.5;
   }
 
-  // extend_right(value)
-  // {
-  //   this.right += value;
-  // }
-  //
-  // contain_horizontal(y)
-  // {
-  //   return this.top  <= y && y <= this.bottom;
-  // }
-  //
-  // contain_vertical(x)
-  // {
-  //   return this.left <= x && x <= this.right;
-  // }
-  //
-  // contain(x, y)
-  // {
-  //   return this.contain_horizontal(y) && this.contain_vertical(x);
-  // }
+  contain_horizontal(y: number)
+  {
+    return this.top  <= y && y <= this.bottom;
+  }
+
+  contain_vertical(x: number)
+  {
+    return this.left <= x && x <= this.right;
+  }
+
+  contain(x: number, y: number)
+  {
+    return this.contain_horizontal(y) && this.contain_vertical(x);
+  }
 }
 
 

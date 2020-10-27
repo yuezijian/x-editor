@@ -8,9 +8,9 @@ export default class Caret
 {
   location: Location = new Location();
 
-  to(index: number, offset: number)
+  to(path: number[], offset: number)
   {
-    this.location.index  = index;
+    this.location.path   = path;
     this.location.offset = offset;
   }
 

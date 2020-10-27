@@ -85,12 +85,27 @@ class Renderer
 
   identity()
   {
-    this.device.setTransform(1, 0, 0, 1, 0, 0);
+    this.device.resetTransform();
   }
 
   translate(x: number, y: number)
   {
     this.device.translate(x, y);
+  }
+
+  translate_to(x: number, y: number)
+  {
+    this.device.setTransform(1, 0, 0, 1, x, y);
+  }
+
+  save()
+  {
+    this.device.save();
+  }
+
+  restore()
+  {
+    this.device.restore();
   }
 
   private device: CanvasRenderingContext2D;

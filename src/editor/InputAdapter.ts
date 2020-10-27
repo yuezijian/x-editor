@@ -7,7 +7,7 @@ export default class InputAdapter
 
   constructor(editor: Editor)
   {
-    this.editor = editor;
+    this._editor = editor;
   }
 
   input(event: InputEvent)
@@ -16,7 +16,7 @@ export default class InputAdapter
     {
       if (event.inputType === 'insertText')
       {
-        this.editor.insert(event.data as string);
+        this._editor.insert(event.data as string);
 
         event.preventDefault();
       }
@@ -29,7 +29,7 @@ export default class InputAdapter
     {
       const transfer = event.clipboardData as DataTransfer;
 
-      transfer.setData('text/plain', this.editor.selection());
+      transfer.setData('text/plain', this._editor.selection());
 
       event.preventDefault();
     }
@@ -41,9 +41,9 @@ export default class InputAdapter
     {
       const transfer = event.clipboardData as DataTransfer;
 
-      const text = this.editor.selection();
+      const text = this._editor.selection();
 
-      this.editor.erase();
+      this._editor.erase();
 
       transfer.setData('text/plain', text);
 
@@ -55,7 +55,7 @@ export default class InputAdapter
   {
     const transfer = event.clipboardData as DataTransfer;
 
-    this.editor.insert(transfer.getData('text/plain'));
+    this._editor.insert(transfer.getData('text/plain'));
 
     event.preventDefault();
   }
@@ -73,7 +73,7 @@ export default class InputAdapter
   {
     this.ime = false;
 
-    this.editor.insert(event.data);
+    this._editor.insert(event.data);
   }
 
   key_down(event: KeyboardEvent)
@@ -84,7 +84,7 @@ export default class InputAdapter
     {
       if (!this.ime)
       {
-        this.editor.delete_backward();
+        this._editor.delete_backward();
       }
     }
 
@@ -92,20 +92,20 @@ export default class InputAdapter
     {
       if (!this.ime)
       {
-        this.editor.delete_forward();
+        this._editor.delete_forward();
       }
     }
 
     if (key === 'Shift')
     {
-      this.editor.anchor_capture();
+      this._editor.anchor_capture();
     }
 
     if (key === 'ArrowLeft')
     {
       if (!this.ime)
       {
-        this.editor.caret_move_left();
+        this._editor.caret_move_left();
       }
 
       return;
@@ -115,7 +115,7 @@ export default class InputAdapter
     {
       if (!this.ime)
       {
-        this.editor.caret_move_right();
+        this._editor.caret_move_right();
       }
 
       return;
@@ -125,7 +125,7 @@ export default class InputAdapter
     {
       if (!this.ime)
       {
-        this.editor.caret_move_up();
+        this._editor.caret_move_up();
       }
 
       return;
@@ -135,7 +135,7 @@ export default class InputAdapter
     {
       if (!this.ime)
       {
-        this.editor.caret_move_down();
+        this._editor.caret_move_down();
       }
 
       return;
@@ -145,7 +145,7 @@ export default class InputAdapter
     {
       if (!this.ime)
       {
-        this.editor.insert('\n');
+        this._editor.insert('\n');
       }
     }
   }
@@ -156,7 +156,7 @@ export default class InputAdapter
 
     if (key === 'Shift')
     {
-      this.editor.anchor_release();
+      this._editor.anchor_release();
     }
   }
 
@@ -173,13 +173,13 @@ export default class InputAdapter
   {
     this.button = true;
 
-    this.editor.focus_by(event.offsetX * 2, event.offsetY * 2);
+    this._editor.focus_by(event.offsetX * 2, event.offsetY * 2);
 
     const target = event.target as HTMLCanvasElement;
 
     target.setPointerCapture(event.pointerId);
 
-    this.editor.anchor_capture();
+    this._editor.anchor_capture();
   }
 
   pointer_up(event: PointerEvent)
@@ -190,14 +190,14 @@ export default class InputAdapter
 
     target.releasePointerCapture(event.pointerId);
 
-    this.editor.anchor_release();
+    this._editor.anchor_release();
   }
 
   pointer_move(event: PointerEvent)
   {
     if (this.button)
     {
-      this.editor.focus_by(event.offsetX * 2, event.offsetY * 2);
+      this._editor.focus_by(event.offsetX * 2, event.offsetY * 2);
     }
   }
 
@@ -205,17 +205,10 @@ export default class InputAdapter
   {
     event.preventDefault();
 
-    if (event.deltaY < 0)
-    {
-      this.editor.scroll_up();
-    }
-    else
-    {
-      this.editor.scroll_down();
-    }
+    this._editor.scroll(event.deltaY);
   }
 
-  private editor: Editor;
+  private _editor: Editor;
 
   private button: boolean = false;
 
