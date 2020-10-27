@@ -10,7 +10,7 @@ const adapter = new InputAdapter(editor);
 
 function XEditor()
 {
-  const [size] = React.useState({ width: 1200, height: 550 })
+  const [size] = React.useState({ width: 700, height: 600 })
 
   const input  = React.useRef() as React.MutableRefObject<HTMLInputElement>;
   const canvas = React.useRef() as React.MutableRefObject<HTMLCanvasElement>;
@@ -30,7 +30,7 @@ function XEditor()
         onPointerMove = { event => adapter.pointer_move(event.nativeEvent) }
         // onWheel     = { event => adapter.wheel(event.nativeEvent) }
       />
-      <p/>
+      <br/>
       <
         input
         ref                 = { input }
@@ -61,16 +61,17 @@ function XEditor()
     editor.insert('HTML5 Canvas 电子病历编辑器\n\n需要创建若干测试，以保证在后续开发过程中，已有行为的正确性。\n\n');
 
     editor.insert('0123456789\nabcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n');
+    editor.insert('\n');
     editor.insert('岳子剑\n');
+    editor.insert('\n');
     editor.insert('12345\n');
     editor.insert('这是一个测试\n');
     editor.insert('abc\n');
-
     editor.insert('\n');
 
-    for (let i = 0; i < 20; ++i)
+    for (let i = 0; i < 5; ++i)
     {
-      editor.insert(`${ i + 1 } 好多行\n`);
+      editor.insert(`${ i + 1 }. 好多行\n`);
     }
   };
 

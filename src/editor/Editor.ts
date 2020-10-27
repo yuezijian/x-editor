@@ -9,7 +9,9 @@ import Renderer  from './Renderer';
 
 export default class Editor
 {
-  font: Font = new Font('courier', 32);
+  font: Font = new Font('courier', 30);
+
+  padding: number = 40;
 
   constructor()
   {
@@ -42,6 +44,8 @@ export default class Editor
     const characters = text.split('').map(value => this.create_character(value));
 
     this.document.splice(begin, end - begin, ...characters);
+
+    this.select = false;
 
     this.set_document_focus(begin + characters.length);
 
@@ -134,6 +138,8 @@ export default class Editor
 
   caret_move_left(): void
   {
+    this._caret.cache = null;
+
     if (!this.select && this._anchor !== this._focus)
     {
       const position = this._anchor < this._focus ? this._anchor : this._focus;
@@ -156,6 +162,8 @@ export default class Editor
 
   caret_move_right(): void
   {
+    this._caret.cache = null;
+
     if (!this.select && this._anchor !== this._focus)
     {
       const position = this._anchor > this._focus ? this._anchor : this._focus;
@@ -180,6 +188,8 @@ export default class Editor
   {
     if (!this.select && this._anchor !== this._focus)
     {
+      this._caret.cache = null;
+
       const position = this._anchor < this._focus ? this._anchor : this._focus;
 
       this.set_document_focus(position);
@@ -193,6 +203,10 @@ export default class Editor
 
       let offset = this._caret.location.offset;
 
+      const x = this._caret.cache ? this._caret.cache : this.pages[i_page].rows[i_row].x_by(offset);
+
+      this._caret.cache = x;
+
       if (i_row - 1 < 0)
       {
         if (i_page - 1 < 0)
@@ -201,8 +215,6 @@ export default class Editor
         }
         else
         {
-          const x = this.pages[i_page].rows[i_row].x_by(offset);
-
           i_page -= 1;
           i_row   = this.pages[i_page].rows.length - 1;
 
@@ -211,8 +223,6 @@ export default class Editor
       }
       else
       {
-        const x = this.pages[i_page].rows[i_row].x_by(offset);
-
         i_row -= 1;
 
         offset = this.pages[i_page].rows[i_row].offset_near(x);
@@ -230,6 +240,8 @@ export default class Editor
   {
     if (!this.select && this._anchor !== this._focus)
     {
+      this._caret.cache = null;
+
       const position = this._anchor > this._focus ? this._anchor : this._focus;
 
       this.set_document_focus(position);
@@ -243,6 +255,10 @@ export default class Editor
 
       let offset = this._caret.location.offset;
 
+      const x = this._caret.cache ? this._caret.cache : this.pages[i_page].rows[i_row].x_by(offset);
+
+      this._caret.cache = x;
+
       if (i_row + 1 >= this.pages[i_page].rows.length)
       {
         if (i_page + 1 >= this.pages.length)
@@ -251,8 +267,6 @@ export default class Editor
         }
         else
         {
-          const x = this.pages[i_page].rows[i_row].x_by(offset);
-
           i_page += 1;
           i_row   = 0;
 
@@ -261,8 +275,6 @@ export default class Editor
       }
       else
       {
-        const x = this.pages[i_page].rows[i_row].x_by(offset);
-
         i_row += 1;
 
         offset = this.pages[i_page].rows[i_row].offset_near(x);
@@ -289,6 +301,50 @@ export default class Editor
     const characters = this.document.slice(begin, end);
 
     return characters.map(character => character.value).join('');
+  }
+
+  scroll(value: number): void
+  {
+    this.view_y += value;
+
+    if (this.view_y < 0)
+    {
+      this.view_y = 0;
+    }
+
+    let y = 0;
+
+    y += this.padding;
+    y += Page.Height;
+    y += (Page.Height + 20) * (this.pages.length - 1);
+    y += this.padding;
+    y -= this.bounding.height;
+
+    if (y < 0)
+    {
+      y = 0;
+    }
+
+    if (this.view_y > y)
+    {
+      this.view_y = y;
+    }
+
+    this.render();
+  }
+
+  seek_to_begin(): void
+  {
+    this.set_document_focus(0);
+
+    this.calculate_caret_by_document_focus();
+  }
+
+  seek_to_end(): void
+  {
+    this.set_document_focus(this.document.length);
+
+    this.calculate_caret_by_document_focus();
   }
 
   render(): void
@@ -348,33 +404,14 @@ export default class Editor
     this.renderer.restore();
   }
 
-  scroll(value: number): void
-  {
-    this.view_y += value;
-
-    if (this.view_y < 0)
-    {
-      this.view_y = 0;
-    }
-
-    const y = (Page.Height + 20) * (this.pages.length - 1);
-
-    if (this.view_y > y)
-    {
-      this.view_y = y;
-    }
-
-    this.render();
-  }
-
-  private create_character(value: string)
+  private create_character(value: string): Character
   {
     const width = this.renderer.measure(this.font, value);
 
     return new Character(this.font, value, width);
   }
 
-  private set_document_focus(value: number)
+  private set_document_focus(value: number): void
   {
     this._focus = value;
 
@@ -446,9 +483,7 @@ export default class Editor
 
     let offset = this._caret.location.offset;
 
-    const row = this.pages[i_page].rows[i_row];
-
-    if (offset + 1 > row.length)
+    if (offset + 1 > this.pages[i_page].rows[i_row].length)
     {
       if (i_row + 1 >= this.pages[i_page].rows.length)
       {
@@ -479,7 +514,7 @@ export default class Editor
     return new Location([i_page, i_row], offset);
   }
 
-  private calculate_caret_by_document_focus()
+  private calculate_caret_by_document_focus(): void
   {
     // 计算光标位置
 
@@ -518,7 +553,7 @@ export default class Editor
     }
   }
 
-  private calculate_document_offset_by(location: Location)
+  private calculate_document_offset_by(location: Location): void
   {
     let offset = 0;
 
@@ -566,33 +601,33 @@ export default class Editor
   {
     this._caret.to(path, focus);
 
-    // todo 光标的移动将影响 view_y，但目前的逻辑不对
+    let i_page = this._caret.location.path[0];
+    let i_row  = this._caret.location.path[1];
 
-    // todo 目前就两层，page -> row ，未来需要一层层的找了
+    let y = 0;
 
-    // const page = this.pages[path[0]];
+    y += this.padding;
+    y += (Page.Height + 20) * i_page;
+    y += this.pages[i_page].padding;
+    y += this.pages[i_page].rows[i_row].baseline;
 
-    // const rows = page.rows;
+    if (y < this.view_y + this.font.height + this.font.vertical_space)
+    {
+      this.view_y = y - this.font.height - this.font.vertical_space;
+    }
 
-    // const baseline = rows[this._caret.location.path[1]].baseline;
+    if (y > this.view_y + this.bounding.height - this.font.vertical_space)
+    {
+      this.view_y = y - this.bounding.height + this.font.vertical_space;
+    }
 
-    // if (baseline - this.view_y < this.font.height * 1.2)
-    // {
-    //   this.view_y = baseline - this.font.height * 1.2;
-    // }
-    //
-    // if (baseline - this.view_y > this.bounding.height)
-    // {
-    //   this.view_y = baseline - this.bounding.height;
-    // }
-    //
-    // if (this.view_y < 0)
-    // {
-    //   this.view_y = 0;
-    // }
+    if (this.view_y < 0)
+    {
+      this.view_y = 0;
+    }
   }
 
-  private update()
+  private update(): void
   {
     // 使用文档结构，更新绘制结构
 
@@ -600,25 +635,25 @@ export default class Editor
 
     let page = new Page(this);
 
-    page.origin_x = 100;
-    page.origin_y = 40 + (page.height + 20) * index;
+    page.origin_x = this.padding;
+    page.origin_y = this.padding + (page.height + 20) * index;
 
     index += 1;
 
     this.pages = [page];
 
-    const full = (character: Character | null) =>
+    const new_page_callback = (character: Character | null) =>
     {
       page = new Page(this);
 
-      page.origin_x = 100;
-      page.origin_y = 40 + (page.height + 20) * index;
+      page.origin_x = this.padding;
+      page.origin_y = this.padding + (page.height + 20) * index;
 
       index += 1;
 
       if (character)
       {
-        page.add(character, full);
+        page.add(character, new_page_callback);
       }
 
       this.pages.push(page);
@@ -626,7 +661,7 @@ export default class Editor
 
     for (const character of this.document)
     {
-      page.add(character, full);
+      page.add(character, new_page_callback);
     }
 
     this.calculate_caret_by_document_focus();

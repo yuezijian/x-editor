@@ -80,6 +80,20 @@ export default class InputAdapter
   {
     const key = event.key;
 
+    if (this._meta)
+    {
+      if (event.code === 'KeyA')
+      {
+        this._editor.seek_to_begin();
+        this._editor.anchor_capture();
+        this._editor.seek_to_end();
+        this._editor.anchor_release();
+        this._editor.render();
+
+        event.preventDefault();
+      }
+    }
+
     if (key === 'Backspace')
     {
       if (!this.ime)
@@ -94,6 +108,11 @@ export default class InputAdapter
       {
         this._editor.delete_forward();
       }
+    }
+
+    if (key === 'Meta')
+    {
+      this._meta = true;
     }
 
     if (key === 'Shift')
@@ -154,6 +173,11 @@ export default class InputAdapter
   {
     const key = event.key;
 
+    if (key === 'Meta')
+    {
+      this._meta = false;
+    }
+
     if (key === 'Shift')
     {
       this._editor.anchor_release();
@@ -209,6 +233,8 @@ export default class InputAdapter
   }
 
   private _editor: Editor;
+
+  private _meta: boolean = false;
 
   private button: boolean = false;
 

@@ -9,8 +9,8 @@ import Util      from './Util';
 
 export default class Page
 {
-  static Width:  number = 900;
-  static Height: number = 1000;
+  static Width:  number = 1200;
+  static Height: number = 1600;
 
   origin_x: number = 0;
   origin_y: number = 0;
@@ -34,7 +34,7 @@ export default class Page
 
     this._index    = 0;
     this._x        = this.bounding.left;
-    this._baseline = this.bounding.top + this._editor.font.height + 4;
+    this._baseline = this.bounding.top + this._editor.font.height;
 
     let row = new Row(this._baseline);
 
@@ -51,7 +51,7 @@ export default class Page
     return this.bounding.height;
   }
 
-  add(character: Character, full: (character: Character | null) => void)
+  add(character: Character, on_overflow: (character: Character | null) => void)
   {
     let row = this.rows[this._index];
 
@@ -63,11 +63,11 @@ export default class Page
       row.linebreak = character;
 
       this._x         = this.bounding.left;
-      this._baseline += this._editor.font.height * 1.2;
+      this._baseline += this._editor.font.vertical_space;
 
       if (this._baseline > this.bounding.bottom - this.padding - this.padding)
       {
-        full(null);
+        on_overflow(null);
 
         return;
       }
@@ -84,11 +84,11 @@ export default class Page
     if (this._x + character.width >= this.bounding.right - this.padding - this.padding)
     {
       this._x         = this.bounding.left;
-      this._baseline += this._editor.font.height * 1.2;
+      this._baseline += this._editor.font.vertical_space  ;
 
       if (this._baseline > this.bounding.bottom - this.padding - this.padding)
       {
-        full(character);
+        on_overflow(character);
 
         return;
       }
@@ -132,13 +132,33 @@ export default class Page
 
   focus(vx: number, vy: number): Location | null
   {
-    const { x, y } = this._transform(vx, vy);
+    let { x, y } = this.transform(vx, vy);
 
     if (this.bounding.contain(x, y))
     {
+      x -= this.padding;
+      y -= this.padding;
+
       const rows = this.rows;
 
       const baselines = rows.map(row => row.baseline);
+
+      const top    = baselines[0] - this._editor.font.height;
+      const bottom = baselines[baselines.length - 1];
+
+      if (y < top)
+      {
+        return new Location([0], 0);
+      }
+
+      if (y > bottom)
+      {
+        const index  = rows.length - 1;
+        const offset = rows[index].length;
+
+        return new Location([index], offset);
+      }
+
       const midlines = baselines.map(baseline => baseline - this._editor.font.height * 0.5);
 
       const index = Util.nearest(midlines, y);
@@ -151,10 +171,10 @@ export default class Page
     return null;
   }
 
-  private _transform(vx: number, vy: number)
+  private transform(vx: number, vy: number)
   {
-    const x = vx - this.origin_x - this.padding;
-    const y = vy - this.origin_y - this.padding;
+    const x = vx - this.origin_x;
+    const y = vy - this.origin_y;
 
     return { x, y };
   }

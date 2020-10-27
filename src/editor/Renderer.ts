@@ -71,14 +71,14 @@ class Renderer
   {
     this.device.fillStyle = color;
 
-    this.device.font = font.css();
+    this.device.font = font.css;
 
     this.device.fillText(text, x, baseline);
   }
 
   measure(font: Font, text: string): number
   {
-    this.device.font = font.css();
+    this.device.font = font.css;
 
     return this.device.measureText(text).width;
   }

@@ -10,8 +10,13 @@ export default class Font
     this.height = height;
   }
 
-  css()
+  get css(): string
   {
     return `${ this.height }px ${ this.family }`;
+  }
+
+  get vertical_space(): number
+  {
+    return this.height * 1.5;
   }
 }
