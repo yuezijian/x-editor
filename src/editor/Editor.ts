@@ -1,8 +1,8 @@
+import Box       from './Box';
 import Caret     from './Caret';
 import Character from './Character';
 import Font      from './Font';
 import Location  from './Location';
-import Page      from './Page';
 import Rectangle from './Rectangle';
 import Renderer  from './Renderer';
 
@@ -315,8 +315,8 @@ export default class Editor
     let y = 0;
 
     y += this.padding;
-    y += Page.Height;
-    y += (Page.Height + 20) * (this.pages.length - 1);
+    y += Box.Height;
+    y += (Box.Height + 20) * (this.pages.length - 1);
     y += this.padding;
     y -= this.bounding.height;
 
@@ -389,19 +389,19 @@ export default class Editor
       }
     }
 
-    this.renderer.save();
+    this.renderer.state_push();
 
     this.renderer.translate(page.origin_x, page.origin_y);
 
-    this.renderer.save();
+    this.renderer.state_push();
 
     this.renderer.translate(page.padding, page.padding);
 
     this._caret.draw(this.renderer, this.font, x, row.baseline);
 
-    this.renderer.restore();
+    this.renderer.state_pop();
 
-    this.renderer.restore();
+    this.renderer.state_pop();
   }
 
   private create_character(value: string): Character
@@ -607,7 +607,7 @@ export default class Editor
     let y = 0;
 
     y += this.padding;
-    y += (Page.Height + 20) * i_page;
+    y += (Box.Height + 20) * i_page;
     y += this.pages[i_page].padding;
     y += this.pages[i_page].rows[i_row].baseline;
 
@@ -633,7 +633,7 @@ export default class Editor
 
     let index = 0;
 
-    let page = new Page(this);
+    let page = new Box(this);
 
     page.origin_x = this.padding;
     page.origin_y = this.padding + (page.height + 20) * index;
@@ -644,7 +644,7 @@ export default class Editor
 
     const new_page_callback = (character: Character | null) =>
     {
-      page = new Page(this);
+      page = new Box(this);
 
       page.origin_x = this.padding;
       page.origin_y = this.padding + (page.height + 20) * index;
@@ -674,7 +674,7 @@ export default class Editor
   private _anchor: number = 0;
   private _focus:  number = 0;
 
-  private pages!: Page[];
+  private pages!: Box[];
 
   private bounding!: Rectangle;
 

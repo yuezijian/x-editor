@@ -98,12 +98,12 @@ class Renderer
     this.device.setTransform(1, 0, 0, 1, x, y);
   }
 
-  save()
+  state_push()
   {
     this.device.save();
   }
 
-  restore()
+  state_pop()
   {
     this.device.restore();
   }

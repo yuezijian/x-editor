@@ -7,17 +7,17 @@ import Row       from './Row';
 import Util      from './Util';
 
 
-export default class Page
+export default class Box
 {
-  static Width:  number = 1200;
-  static Height: number = 1600;
+  static Width:  number = 400;
+  static Height: number = 400;
 
   origin_x: number = 0;
   origin_y: number = 0;
 
-  bounding: Rectangle = new Rectangle();
+  bound: Rectangle = new Rectangle();
 
-  padding: number = 40;
+  padding: number = 0;
 
   rows: Row[];
 
@@ -26,97 +26,69 @@ export default class Page
   {
     this._editor = editor;
 
-    this.bounding.left = 0;
-    this.bounding.top  = 0;
+    this.bound.left = 0;
+    this.bound.top  = 0;
 
-    this.bounding.right  = this.bounding.left + Page.Width;
-    this.bounding.bottom = this.bounding.top  + Page.Height;
+    this.bound.right  = this.bound.left + Box.Width;
+    this.bound.bottom = this.bound.top  + Box.Height;
 
     this._index    = 0;
-    this._x        = this.bounding.left;
-    this._baseline = this.bounding.top + this._editor.font.height;
+    this._baseline = this.bound.top + this._editor.font.height;
 
-    let row = new Row(this._baseline);
+    let row = new Row(this, this._baseline);
 
     this.rows = [row];
   }
 
   get width(): number
   {
-    return this.bounding.width;
+    return this.bound.width;
   }
 
   get height(): number
   {
-    return this.bounding.height;
+    return this.bound.height;
   }
 
-  add(character: Character, on_overflow: (character: Character | null) => void)
+  add(character: Character, on_overflow: (character: Character | null) => void): void
   {
     let row = this.rows[this._index];
 
-    if (character.value === '\n')
+    const on_new_row = (character: Character | null) =>
     {
-      character.x        = this._x;
-      character.baseline = this._baseline;
-
-      row.linebreak = character;
-
-      this._x         = this.bounding.left;
       this._baseline += this._editor.font.vertical_space;
 
-      if (this._baseline > this.bounding.bottom - this.padding - this.padding)
-      {
-        on_overflow(null);
-
-        return;
-      }
-
-      row = new Row(this._baseline);
-
-      this.rows.push(row);
-
-      this._index += 1;
-
-      return;
-    }
-
-    if (this._x + character.width >= this.bounding.right - this.padding - this.padding)
-    {
-      this._x         = this.bounding.left;
-      this._baseline += this._editor.font.vertical_space  ;
-
-      if (this._baseline > this.bounding.bottom - this.padding - this.padding)
+      if (this._baseline > this.bound.bottom - this.padding - this.padding)
       {
         on_overflow(character);
 
         return;
       }
 
-      row = new Row(this._baseline);
+      const row = new Row(this, this._baseline);
 
       this.rows.push(row);
 
       this._index += 1;
-    }
 
-    character.x        = this._x;
-    character.baseline = this._baseline;
+      if (character)
+      {
+        row.add(character, on_new_row);
+      }
+    };
 
-    row.characters.push(character);
-
-    this._x += character.width;
+    row.add(character, on_new_row);
   }
 
-  draw(renderer: Renderer)
+  draw(renderer: Renderer): void
   {
-    renderer.save();
+    renderer.state_push();
 
     renderer.translate(this.origin_x, this.origin_y);
 
-    renderer.draw_rectangle(this.bounding, '#ffffff');
+    renderer.draw_rectangle(this.bound, '#ffffff');
 
-    renderer.save();
+    renderer.state_push();
 
     renderer.translate(this.padding, this.padding);
 
@@ -125,16 +97,16 @@ export default class Page
       row.draw(renderer, this._editor.font);
     }
 
-    renderer.restore();
+    renderer.state_pop();
 
-    renderer.restore();
+    renderer.state_pop();
   }
 
   focus(vx: number, vy: number): Location | null
   {
     let { x, y } = this.transform(vx, vy);
 
-    if (this.bounding.contain(x, y))
+    if (this.bound.contain(x, y))
     {
       x -= this.padding;
       y -= this.padding;
@@ -182,6 +154,5 @@ export default class Page
   private _editor: Editor;
 
   private _index:    number;
-  private _x:        number;
   private _baseline: number;
 }
