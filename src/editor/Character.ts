@@ -17,7 +17,7 @@ export default class Character
 
   select: boolean = false;
 
-  constructor(font: Font, value: string, width: number, baseline: number = 0)
+  constructor(font: Font, value: string, width: number)
   {
     this.font = font;
 
@@ -59,7 +59,6 @@ export default class Character
     this.bound.bottom = this.parent!.baseline + 2;
   }
 
-  private _x: number = 0;
-
+  private _x:      number = 0;
   private _center: number = 0;
 }

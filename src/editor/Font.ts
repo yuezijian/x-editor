@@ -19,4 +19,9 @@ export default class Font
   {
     return this.height * 1.5;
   }
+
+  equal(font: Font): boolean
+  {
+    return this.family === font.family && this.height === font.height;
+  }
 }

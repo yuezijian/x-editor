@@ -1,14 +1,25 @@
 import Box       from './Box';
 import Caret     from './Caret';
 import Character from './Character';
+import Document  from './Document';
 import Font      from './Font';
 import Location  from './Location';
 import Rectangle from './Rectangle';
 import Renderer  from './Renderer';
+import Text      from './Text';
+
+
+const PageWidth  = 500;
+const PageHeight = 600;
 
 
 export default class Editor
 {
+  // private data: string[] = [];
+  private data: Character[] = [];
+
+  private document: Document;
+
   font: Font = new Font('courier', 30);
 
   padding: number = 40;
@@ -17,15 +28,27 @@ export default class Editor
   {
     console.log('Editor constructor');
 
-    this.document = [];
+    this.document = new Document();
+
+    const font1 = new Font('courier', 20);
+    const font2 = new Font('courier', 30);
+    const font3 = new Font('courier', 40);
+
+    const text1 = new Text(font1, '123');
+    const text2 = new Text(font2, '测试');
+    const text3 = new Text(font3, 'abc');
+
+    this.document.insert(text1);
+    this.document.insert(text2);
+    this.document.insert(text3);
   }
 
   attach(canvas: HTMLCanvasElement): void
   {
-    this.bounding = new Rectangle();
+    this._bound = new Rectangle();
 
-    this.bounding.right  = canvas.width;
-    this.bounding.bottom = canvas.height;
+    this._bound.right  = canvas.width;
+    this._bound.bottom = canvas.height;
 
     canvas.style.cursor = 'text';
 
@@ -38,12 +61,11 @@ export default class Editor
 
   insert(text: string): void
   {
-    const begin = this._anchor < this._focus ? this._anchor : this._focus;
-    const end   = this._anchor > this._focus ? this._anchor : this._focus;
+    const { begin, end } = this.caret_range();
 
     const characters = text.split('').map(value => this.create_character(value));
 
-    this.document.splice(begin, end - begin, ...characters);
+    this.data.splice(begin, end - begin, ...characters);
 
     this.select = false;
 
@@ -58,10 +80,9 @@ export default class Editor
   {
     if (this._anchor !== this._focus)
     {
-      const begin = this._anchor < this._focus ? this._anchor : this._focus;
-      const end   = this._anchor > this._focus ? this._anchor : this._focus;
+      const { begin, end } = this.caret_range();
 
-      this.document.splice(begin, end - begin);
+      this.data.splice(begin, end - begin);
 
       this.set_document_focus(begin);
 
@@ -92,7 +113,7 @@ export default class Editor
   {
     if (this._anchor === this._focus)
     {
-      if (this._focus + 1 <= this.document.length)
+      if (this._focus + 1 <= this.data.length)
       {
         this.anchor_capture();
 
@@ -295,10 +316,9 @@ export default class Editor
       return '';
     }
 
-    const begin = this._anchor < this._focus ? this._anchor : this._focus;
-    const end   = this._anchor > this._focus ? this._anchor : this._focus;
+    const { begin, end } = this.caret_range();
 
-    const characters = this.document.slice(begin, end);
+    const characters = this.data.slice(begin, end);
 
     return characters.map(character => character.value).join('');
   }
@@ -315,10 +335,10 @@ export default class Editor
     let y = 0;
 
     y += this.padding;
-    y += Box.Height;
-    y += (Box.Height + 20) * (this.pages.length - 1);
+    y += PageHeight;
+    y += (PageHeight + 20) * (this.pages.length - 1);
     y += this.padding;
-    y -= this.bounding.height;
+    y -= this._bound.height;
 
     if (y < 0)
     {
@@ -342,7 +362,7 @@ export default class Editor
 
   seek_to_end(): void
   {
-    this.set_document_focus(this.document.length);
+    this.set_document_focus(this.data.length);
 
     this.calculate_caret_by_document_focus();
   }
@@ -351,7 +371,7 @@ export default class Editor
   {
     this.renderer.identity();
 
-    this.renderer.draw_rectangle(this.bounding, '#ececec');
+    this.renderer.draw_rectangle(this._bound, '#ececec');
 
     this.renderer.translate(0, -this.view_y);
 
@@ -420,19 +440,22 @@ export default class Editor
       this._anchor = this._focus;
     }
 
-    for (let i = 0; i < this.document.length; ++i)
+    // 清除所有选择区域
+
+    for (let i = 0; i < this.data.length; ++i)
     {
-      this.document[i].select = false;
+      this.data[i].select = false;
     }
+
+    // 选择一段区域
 
     if (this._anchor !== this._focus)
     {
-      const begin = this._anchor < this._focus ? this._anchor : this._focus;
-      const end   = this._anchor > this._focus ? this._anchor : this._focus;
+      const { begin, end } = this.caret_range();
 
       for (let i = begin; i < end; ++i)
       {
-        this.document[i].select = true;
+        this.data[i].select = true;
       }
     }
   }
@@ -607,7 +630,7 @@ export default class Editor
     let y = 0;
 
     y += this.padding;
-    y += (Box.Height + 20) * i_page;
+    y += (PageHeight + 20) * i_page;
     y += this.pages[i_page].padding;
     y += this.pages[i_page].rows[i_row].baseline;
 
@@ -616,14 +639,34 @@ export default class Editor
       this.view_y = y - this.font.height - this.font.vertical_space;
     }
 
-    if (y > this.view_y + this.bounding.height - this.font.vertical_space)
+    if (y > this.view_y + this._bound.height - this.font.vertical_space)
     {
-      this.view_y = y - this.bounding.height + this.font.vertical_space;
+      this.view_y = y - this._bound.height + this.font.vertical_space;
     }
 
     if (this.view_y < 0)
     {
       this.view_y = 0;
+    }
+  }
+
+  private caret_range()
+  {
+    const begin = this._anchor < this._focus ? this._anchor : this._focus;
+    const end   = this._anchor > this._focus ? this._anchor : this._focus;
+
+    return { begin, end };
+  }
+
+  *characters_in_document()
+  {
+    let i = 0;
+
+    while (i < 2)
+    {
+      yield i;
+
+      i++;
     }
   }
 
@@ -633,7 +676,7 @@ export default class Editor
 
     let index = 0;
 
-    let page = new Box(this);
+    let page = new Box(this, PageWidth, PageHeight);
 
     page.origin_x = this.padding;
     page.origin_y = this.padding + (page.height + 20) * index;
@@ -644,7 +687,7 @@ export default class Editor
 
     const new_page_callback = (character: Character | null) =>
     {
-      page = new Box(this);
+      page = new Box(this, PageWidth, PageHeight);
 
       page.origin_x = this.padding;
       page.origin_y = this.padding + (page.height + 20) * index;
@@ -659,15 +702,13 @@ export default class Editor
       this.pages.push(page);
     };
 
-    for (const character of this.document)
+    for (const character of this.data)
     {
       page.add(character, new_page_callback);
     }
 
     this.calculate_caret_by_document_focus();
   }
-
-  private readonly document: Character[];
 
   private select: boolean = false;
 
@@ -676,7 +717,7 @@ export default class Editor
 
   private pages!: Box[];
 
-  private bounding!: Rectangle;
+  private _bound!: Rectangle;
 
   private _caret: Caret = new Caret();
 

@@ -9,28 +9,24 @@ import Util      from './Util';
 
 export default class Box
 {
-  static Width:  number = 400;
-  static Height: number = 400;
-
   origin_x: number = 0;
   origin_y: number = 0;
 
   bound: Rectangle = new Rectangle();
 
-  padding: number = 0;
+  padding: number = 20;
 
   rows: Row[];
 
-  // constructor(editor: Editor, width: number, height: number)
-  constructor(editor: Editor)
+  constructor(editor: Editor, width: number, height: number)
   {
     this._editor = editor;
 
     this.bound.left = 0;
     this.bound.top  = 0;
 
-    this.bound.right  = this.bound.left + Box.Width;
-    this.bound.bottom = this.bound.top  + Box.Height;
+    this.bound.right  = this.bound.left + width;
+    this.bound.bottom = this.bound.top  + height;
 
     this._index    = 0;
     this._baseline = this.bound.top + this._editor.font.height;
@@ -65,15 +61,17 @@ export default class Box
         return;
       }
 
-      const row = new Row(this, this._baseline);
+      const new_row = new Row(this, this._baseline);
 
-      this.rows.push(row);
+      new_row.node_previous = row;
+
+      this.rows.push(new_row);
 
       this._index += 1;
 
       if (character)
       {
-        row.add(character, on_new_row);
+        new_row.add(character, on_new_row);
       }
     };
 

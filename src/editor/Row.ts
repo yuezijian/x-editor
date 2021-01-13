@@ -23,6 +23,9 @@ export default class Row
 
   linebreak: Character | null = null;
 
+  node_previous: Row | null = null;
+  node_next:     Row | null = null;
+
   constructor(box: Box, baseline: number)
   {
     this.parent = box;

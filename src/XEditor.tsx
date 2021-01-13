@@ -82,4 +82,3 @@ function XEditor()
 
 
 export default XEditor;
-
